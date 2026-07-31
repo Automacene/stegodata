@@ -6,8 +6,9 @@
 
 > **Universal, language-agnostic, and non-destructive metadata embedding for the AI era.**
 
-[![jsDelivr](https://data.jsdelivr.com/v1/package/npm/stegodata/badge)](https://www.jsdelivr.com/package/npm/stegodata)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![npm version](https://img.shields.io/npm/v/@automacene/stegodata.svg)](https://www.npmjs.com/package/@automacene/stegodata)
+[![jsDelivr](https://data.jsdelivr.com/v1/package/npm/@automacene/stegodata/badge)](https://www.jsdelivr.com/package/npm/@automacene/stegodata)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)   
 
 ## ⚡ Quick Start
 
@@ -15,7 +16,7 @@ StegoData works out of the box with zero external dependencies in Node.js, moder
 
 ### 1. Installation
 ```bash
-npm install stegodata
+npm install @automacene/stegodata  
 ```
 
 Or load directly in the browser via CDN:
