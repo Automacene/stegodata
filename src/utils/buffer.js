@@ -3,13 +3,13 @@ export function writeLengthFooter(stegoBytes) {
     ? stegoBytes
     : new Uint8Array(stegoBytes);
 
-  const totalLength = bytes.length + 4;
+  const totalLength = bytes.length + 4; // Total size including footer
   const output = new Uint8Array(totalLength);
   output.set(bytes, 0);
 
   const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
-  view.setUint32(bytes.length, totalLength, true);
-
+  
+  view.setUint32(totalLength - 4, totalLength, true);
   return output;
 }
 

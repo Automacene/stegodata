@@ -2,6 +2,7 @@ import { MARKERS, RESERVED_HEADERS, CUSTOM_HEADER_PREFIX } from './spec.js';
 import { writeLengthFooter } from '../utils/buffer.js';
 
 const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 function normalizePayload(payload) {
   if (payload instanceof Uint8Array) {
@@ -43,4 +44,3 @@ export function serializeBlock({ namespace, contentType = 'text/plain', headers 
   return writeLengthFooter(blockBytes);
 }
 
-const decoder = new TextDecoder();

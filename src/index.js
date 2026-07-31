@@ -1,26 +1,58 @@
 import { serializeBlock } from './core/builder.js';
 import { parseBlock } from './core/parser.js';
 import { readLengthFooter } from './utils/buffer.js';
-import { RawAdapter } from './adapters/raw.js';
+import {
+  BaseAdapter,
+  RawAdapter,
+  getAdapter,
+  registerAdapter,
+  unregisterAdapter
+} from './adapters/index.js';
 
 export class StegoData {
-  constructor(adapter = new RawAdapter()) {
-    this.adapter = adapter;
+  /**
+   * @param {BaseAdapter | string} [adapterOrType] - Custom BaseAdapter instance or MIME type/extension string
+   */
+  constructor(adapterOrType) {
+    if (adapterOrType instanceof BaseAdapter) {
+      this.adapter = adapterOrType;
+    } else {
+      this.adapter = getAdapter(adapterOrType);
+    }
   }
 
-  async inject(fileInput, { namespace, contentType = 'text/plain', headers = {}, payload }) {
+  async inject(fileInput, { namespace, contentType = 'text/plain', headers = {}, payload, mimeType, filename }) {
     if (!namespace) {
       throw new Error("StegoData Error: 'namespace' is required.");
     }
 
+    // Dynamic resolution if options specify a format context override
+    const adapter = (mimeType || filename)
+      ? getAdapter(mimeType || filename)
+      : this.adapter;
+
     const fileBuffer = await this._toUint8Array(fileInput);
     const blockBytes = serializeBlock({ namespace, contentType, headers, payload });
-    return this.adapter.append(fileBuffer, blockBytes);
+
+    return adapter.inject(fileBuffer, blockBytes);
   }
 
-  async extract(fileInput) {
+  async extract(fileInput, options = {}) {
+    const adapter = (options.mimeType || options.filename)
+      ? getAdapter(options.mimeType || options.filename)
+      : this.adapter;
+
+    const fileBuffer = await this._toUint8Array(fileInput);
+
+    // Defer to custom format extraction if implemented by adapter
+    const adapterExtracted = adapter.extract(fileBuffer);
+    if (adapterExtracted) {
+      return adapterExtracted.map((bytes) => parseBlock(bytes)).filter(Boolean);
+    }
+
+    // Default: O(1) Reverse-seeking tail parse
     const blocks = [];
-    let currentBuffer = await this._toUint8Array(fileInput);
+    let currentBuffer = fileBuffer;
 
     while (currentBuffer.length > 4) {
       const blockLength = readLengthFooter(currentBuffer);
@@ -43,68 +75,54 @@ export class StegoData {
     return blocks;
   }
 
-  async encode(target, options) {
-    return this.inject(target, options);
-  }
-
-  async decode(target) {
-    return this.extract(target);
-  }
-
   async _toUint8Array(input) {
-    if (input instanceof Uint8Array) {
-      return input;
-    }
+    if (input instanceof Uint8Array) return input;
+    if (input instanceof ArrayBuffer) return new Uint8Array(input);
+    if (ArrayBuffer.isView(input)) return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
 
-    if (input instanceof ArrayBuffer) {
-      return new Uint8Array(input);
-    }
-
-    if (ArrayBuffer.isView(input)) {
-      return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-    }
-
-    if (input instanceof Blob || input instanceof File) {
+    if (typeof Blob !== 'undefined' && (input instanceof Blob || input instanceof File)) {
       const buffer = await input.arrayBuffer();
       return new Uint8Array(buffer);
     }
 
-    throw new Error('StegoData Error: Unsupported input type. Expected Uint8Array, ArrayBuffer, File, or Blob.');
+    throw new Error('StegoData Error: Unsupported input type.');
   }
-
 }
 
-StegoData.inject = async function inject(target, options) {
-  return new StegoData().inject(target, options);
-};
+// Expose registry controls as static helpers
+StegoData.registerAdapter = registerAdapter;
+StegoData.getAdapter = getAdapter;
+StegoData.unregisterAdapter = unregisterAdapter;
 
-StegoData.extract = async function extract(target) {
-  return new StegoData().extract(target);
-};
+StegoData.inject = (target, options, adapter) => new StegoData(adapter).inject(target, options);
+StegoData.extract = (target, options, adapter) => new StegoData(adapter).extract(target, options);
 
-StegoData.encode = async function encode(target, options) {
-  return StegoData.inject(target, options);
-};
-
-StegoData.decode = async function decode(target) {
-  return StegoData.extract(target);
-};
-
-// Assign directly to window for non-module IIFE browser contexts
+// Browser IIFE Global Bindings (for <script src="stegodata.min.js">)
 if (typeof window !== 'undefined') {
   window.StegoData = StegoData;
   window.StegoDataLib = {
     StegoData,
     inject: StegoData.inject,
     extract: StegoData.extract,
-    encode: StegoData.encode,
-    decode: StegoData.decode,
+    registerAdapter,
+    getAdapter,
+    unregisterAdapter,
     serializeBlock,
     parseBlock,
     readLengthFooter,
+    BaseAdapter,
     RawAdapter
   };
 }
 
 export default StegoData;
-export { serializeBlock, parseBlock, readLengthFooter, RawAdapter };
+export {
+  BaseAdapter,
+  RawAdapter,
+  registerAdapter,
+  getAdapter,
+  unregisterAdapter,
+  serializeBlock,
+  parseBlock,
+  readLengthFooter
+};
