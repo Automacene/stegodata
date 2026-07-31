@@ -65,8 +65,16 @@ export class StegoData {
   }
 }
 
+// Assign directly to window for non-module IIFE browser contexts
 if (typeof window !== 'undefined') {
   window.StegoData = StegoData;
+  window.StegoDataLib = {
+    StegoData,
+    serializeBlock,
+    parseBlock,
+    readLengthFooter,
+    RawAdapter
+  };
 }
 
 export default StegoData;
