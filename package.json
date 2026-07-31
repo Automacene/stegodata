@@ -1,0 +1,13 @@
+{
+  "name": "stegodata",
+  "version": "1.0.0",
+  "description": "Universal metadata embedding SDK for AI data pipelines",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "esbuild src/index.js --bundle --format=iife --global-name=StegoDataLib --minify --outfile=dist/stegodata.min.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
