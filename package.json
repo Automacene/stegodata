@@ -1,6 +1,6 @@
 {
   "name": "@automacene/stegodata",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Language-agnostic protocol for embedding structured steganographic memory into unstructured files—turning documents, images, and media into self-contained, context-aware containers for AI pipelines.",
   "type": "module",
   "author": "Automacene (https://github.com/Automacene)",
