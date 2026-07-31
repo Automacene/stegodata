@@ -1,6 +1,81 @@
+<p align="center">
+  <img src="assets/stegodataProfile.png" alt="StegoData Banner" width="100%" style="max-width: 800px; border-radius: 10px;" />
+</p>
+
 # StegoData (v1.0 Specification)
 
-Universal, language-agnostic, and non-destructive metadata embedding for the AI era.
+> **Universal, language-agnostic, and non-destructive metadata embedding for the AI era.**
+
+[![jsDelivr](https://data.jsdelivr.com/v1/package/npm/stegodata/badge)](https://www.jsdelivr.com/package/npm/stegodata)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+## ⚡ Quick Start
+
+StegoData works out of the box with zero external dependencies in Node.js, modern bundlers, and direct browser script tags.
+
+### 1. Installation
+```bash
+npm install stegodata
+```
+
+Or load directly in the browser via CDN:
+```html
+<script src="[https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js](https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js)"></script>
+```
+
+### 2. Basic Usage
+
+#### Node.js / ES Modules
+```javascript
+import { StegoData } from 'stegodata';
+import fs from 'fs/promises';
+
+// Read an existing file (PDF, TXT, Image, etc.)
+const inputBuffer = await fs.readFile('./document.pdf');
+
+// Inject AI metadata or agent memory
+const taggedBuffer = await StegoData.inject(inputBuffer, {
+  namespace: 'ai:chunk-cache',
+  contentType: 'application/json',
+  headers: {
+    '+author': 'Agent-007',
+    '+tags': 'processed, rag-ready'
+  },
+  payload: {
+    summary: 'Executive brief on Q3 earnings.',
+    chunks: [
+      { id: 1, text: 'Revenue grew by 14%...' }
+    ]
+  }
+});
+
+// Save the asset — standard PDF viewers still open it cleanly!
+await fs.writeFile('./document_tagged.pdf', taggedBuffer);
+
+// Extract metadata anywhere downstream
+const blocks = await StegoData.extract(taggedBuffer);
+console.log(blocks[0].payload);
+```
+
+#### Browser Script Tag
+```html
+<script src="[https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js](https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js)"></script>
+<script>
+  async function processFile(fileInput) {
+    const file = fileInput.files[0];
+    
+    // Inject metadata directly into a browser File object
+    const taggedBytes = await StegoData.inject(file, {
+      namespace: 'browser:session',
+      payload: { clientTimestamp: Date.now() }
+    });
+
+    // Extract blocks back
+    const metadata = await StegoData.extract(taggedBytes);
+    console.log('Extracted StegoData:', metadata);
+  }
+</script>
+```
 
 ## The Crisis of Scale in the Age of AI
 
@@ -72,7 +147,7 @@ content-type: application/json
 | --- | --- | --- |
 | **PDF, Markdown, Plain Text** | **High** | Ignored by native readers; safe to append directly. |
 | **PNG, JPEG, Media Files** | **Moderate-High** | Usually ignored past image structural markers (`IEND`, `EOI`), but check parser behavior. |
-| **ZIP-based (DOCX, XLSX, EPUB)** | **Low** *for now* | Archives rely on an End of Central Directory (EOCD) at the absolute tail. StegoData cannot be naively appended without breaking standard unzipping tools unless wrapped or placed prior to the EOCD. |
+| **ZIP-based (DOCX, XLSX, EPUB)** | **Low** *for now* | Archives rely on an End of Central Directory (EOCD) at the absolute tail. Requires adapter handling before EOCD. |
 
 ### Parsing & Extraction Algorithm
 
@@ -86,72 +161,57 @@ Because multiple StegoData blocks can be stacked sequentially at the tail of a f
 4. **Extract & Parse:**
 * Extract the block data bounded by `--STEGO-BEGIN--` and `--STEGO-END--`.
 * Parse the headers up to `===PAYLOAD===` and read the payload body according to `content-type`.
+
+
 5. **Iterate or Terminate:**
-* Check the remaining file data preceding the current block. If another StegoData block exists immediately prior (detectable by checking if the preceding bytes match another tail length or block structure), repeat steps 2–4.
+* Check the remaining file data preceding the current block. If another StegoData block exists immediately prior, repeat steps 2–4.
 * If the cursor reaches a native format end marker (e.g., `%%EOF` or `IEND`), terminate the extraction loop.
 
-### Technical Guarantees & Safety
 
-* **Encoding:** The entire header and metadata block from `--STEGO-BEGIN--` down to `===PAYLOAD===` is strictly UTF-8, ensuring global internationalization support while maintaining 1-to-1 ASCII compatibility for core routing keywords.
-* **Multi-Block Support:** Because each block concludes with its own length pointer, multiple namespaces can be safely stacked or chained at the end of a single file.
-* **Write/Stripping Safety:** Standard file utilities and text editors should be configured to preserve trailing bytes upon saving unless an explicit "strip metadata" command is executed. Pipelines recalculating cryptographic hashes (like SHA-256) should either isolate the native file content prior to the first `--STEGO-BEGIN--` marker or treat the StegoData-appended asset as a distinct artifact container.
 
-## Project Architecture & Implementation
+## Project Architecture & Extensibility
 
-To support universal, non-destructive metadata embedding across JavaScript environments, the reference SDK is designed around a zero-dependency, modular pipeline. It provides lightweight data structures, backward-seeking binary stream parsing, and cross-runtime compatibility for both modern Node.js and script-tag browser integration.
+To support universal, non-destructive metadata embedding across JavaScript environments, the reference SDK is designed around a zero-dependency, modular pipeline.
+```text
+src/
+├── core/
+│   ├── spec.js       # Constants, markers, and validation rules
+│   ├── builder.js    # Serializes headers & payloads into binary blocks
+│   └── parser.js     # Parses binary blocks back into JS objects
+├── utils/
+│   └── buffer.js     # Little-endian 4-byte length read/write utilities
+├── adapters/
+│   ├── base.js       # Standard interface contract for format adapters
+│   ├── raw.js        # Default tail-concatenation strategy
+│   └── index.js      # Format adapter registry and lookup
+└── index.js          # Main entrypoint & unified browser/Node API
+```
 
-### Core Component Directory
+### Custom Adapter Registry
 
-#### Specification & Protocol Rules (`src/core/spec.js`)
+StegoData allows registering custom file adapters to handle format-specific constraints (such as PNG chunk injection or PDF cross-reference updates):
+```javascript
+import { StegoData, BaseAdapter } from 'stegodata';
 
-* **Purpose:** Single source of truth for protocol constants and structural markers.
-* **Responsibilities:**
-* Defines fixed string markers (`--STEGO-BEGIN--`, `===PAYLOAD===`, `--STEGO-END--`).
-* Enforces reserved header naming rules (`namespace`, `content-type`, `schema`) and user-metadata prefix logic (`+`).
-* Prevents drift between the runtime implementation and the v1.0 specification format.
+class CustomFormatAdapter extends BaseAdapter {
+  inject(fileBuffer, blockBytes) {
+    // Custom byte placement logic
+    return modifiedBuffer;
+  }
+}
 
-#### Block Serialization Engine (`src/core/builder.js`)
+// Register for auto-resolution by MIME type or file extension
+StegoData.registerAdapter('image/custom', new CustomFormatAdapter());
+StegoData.registerAdapter('.custom', new CustomFormatAdapter());
+```
 
-* **Purpose:** Converts structured metadata and payloads into byte streams.
-* **Responsibilities:**
-* Validates and formats UTF-8 header lines.
-* Injects the `===PAYLOAD===` boundary marker and serializes payload objects or raw binary streams.
-* Encapsulates the output between protocol markers and computes the total block length required for the trailing byte footer.
-
-#### Traversal & Parsing Engine (`src/core/parser.js`)
-
-* **Purpose:** Reconstructs metadata and payloads from raw binary inputs.
-* **Responsibilities:**
-* Scans serialized blocks to isolate header key-value maps from the underlying byte payload.
-* Validates UTF-8 encoding across structural boundaries.
-* Executes header parsing, stripping custom `+` prefixes for high-level user data extraction while retaining reserved routing keys.
-
-#### Binary Buffer Utilities (`src/utils/buffer.js`)
-
-* **Purpose:** Low-level byte manipulation and memory offset calculations.
-* **Responsibilities:**
-* **Footer Generation:** Writes the $O(1)$ trailing 4-byte little-endian length integer onto block outputs (`writeLengthFooter`).
-* **Footer Inspection:** Extracts and decodes the final 4 bytes from binary buffers to drive reverse-seeking calculations (`readLengthFooter`).
-
-#### Target Adapter Subsystem (`src/adapters/`)
-
-* **Purpose:** Provides file-format-specific byte composition strategy interface.
-* **Implementations:**
-* `base.js`: Establishes the standard contract interface for file manipulations.
-* `raw.js`: The primary default adapter; handles standard non-destructive concatenation by appending encoded stego blocks directly to the end of raw file byte streams.
-
-#### Universal SDK Entrypoint (`src/index.js`)
-
-* **Purpose:** Exposes unified high-level APIs for Node.js and browser environments.
-* **Responsibilities:**
-* Wraps builder, parser, and adapter operations into class-based methods (`inject`, `extract`) and functional static helpers (`encode`, `decode`).
-* Normalizes dynamic inputs across environments (accepting `Uint8Array`, `ArrayBuffer`, `Blob`, `File`, and typed-array views).
-* Exposes global window properties (`window.StegoData` and `window.StegoDataLib`) for direct browser script-tag consumption.
-
-### Build System & Distribution
+## Development & Build System
 
 The SDK uses `esbuild` to assemble zero-dependency runtime targets optimized for execution speed and minimal footprint.
 
-* **Source Target:** `src/index.js`
-* **Distribution Bundle:** `dist/stegodata.min.js` (IIFE bundle targeting browser runtimes without module requirements)
-* **Testing Suite:** `tests/stego.test.js` (Unit test suite covering block serialization, $O(1)$ extraction accuracy, `File`/`Blob` interface decoding, and edge-case payload validation)
+* **Build Bundle:** `npm run build` (outputs `dist/stegodata.min.js`)
+* **Run Test Suite:** `npm test` (covers block serialization, $O(1)$ extraction accuracy, and edge-case inputs)
+
+## License
+
+[Apache 2.0](./LICENSE) © Automacene
