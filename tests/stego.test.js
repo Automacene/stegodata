@@ -43,3 +43,16 @@ test('accepts File input for browser-style usage', async () => {
   assert.equal(extracted[0].headers.namespace, 'browser:test');
   assert.equal(extracted[0].payload, 'blob-payload');
 });
+
+test('exposes static convenience helpers', async () => {
+  const payload = new Uint8Array([1, 2, 3, 4]);
+  const combined = await StegoData.inject(payload, {
+    namespace: 'static:helpers',
+    payload: 'static-payload',
+  });
+
+  const extracted = await StegoData.decode(combined);
+  assert.equal(extracted.length, 1);
+  assert.equal(extracted[0].headers.namespace, 'static:helpers');
+  assert.equal(extracted[0].payload, 'static-payload');
+});
