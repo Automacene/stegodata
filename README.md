@@ -2,7 +2,7 @@
   <img src="assets/stegodataProfile.png" alt="StegoData Banner" width="100%" style="max-width: 800px; border-radius: 10px;" />
 </p>
 
-# StegoData (v1.0 Specification)
+# StegoData (v1.0.3 Specification)
 
 > **Universal, language-agnostic, and non-destructive metadata embedding for the AI era.**
 
@@ -21,14 +21,14 @@ npm install @automacene/stegodata
 
 Or load directly in the browser via CDN:
 ```html
-<script src="[https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js](https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js)"></script>
+<script src="[https://cdn.jsdelivr.net/npm/@automacene/stegodata@latest/dist/stegodata.min.js](https://cdn.jsdelivr.net/npm/@automacene/stegodata@latest/dist/stegodata.min.js)"></script>
 ```
 
 ### 2. Basic Usage
 
 #### Node.js / ES Modules
 ```javascript
-import { StegoData } from 'stegodata';
+import { StegoData } from '@automacene/stegodata';
 import fs from 'fs/promises';
 
 // Read an existing file (PDF, TXT, Image, etc.)
@@ -60,7 +60,7 @@ console.log(blocks[0].payload);
 
 #### Browser Script Tag
 ```html
-<script src="[https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js](https://cdn.jsdelivr.net/npm/stegodata@latest/dist/stegodata.min.js)"></script>
+<script src="[https://cdn.jsdelivr.net/npm/@automacene/stegodata@latest/dist/stegodata.min.js](https://cdn.jsdelivr.net/npm/@automacene/stegodata@latest/dist/stegodata.min.js)"></script>
 <script>
   async function processFile(fileInput) {
     const file = fileInput.files[0];
@@ -160,15 +160,14 @@ Because multiple StegoData blocks can be stacked sequentially at the tail of a f
 2. **Read Length Pointer:** Read the final **4 bytes** of the file. Convert this little-endian integer into a numeric value ($N$).
 3. **Jump to Block Start:** Seek backward from the end of the file by $N$ bytes to find the exact starting byte of `--STEGO-BEGIN--`.
 4. **Extract & Parse:**
+
 * Extract the block data bounded by `--STEGO-BEGIN--` and `--STEGO-END--`.
 * Parse the headers up to `===PAYLOAD===` and read the payload body according to `content-type`.
 
-
 5. **Iterate or Terminate:**
+
 * Check the remaining file data preceding the current block. If another StegoData block exists immediately prior, repeat steps 2–4.
 * If the cursor reaches a native format end marker (e.g., `%%EOF` or `IEND`), terminate the extraction loop.
-
-
 
 ## Project Architecture & Extensibility
 
@@ -192,7 +191,7 @@ src/
 
 StegoData allows registering custom file adapters to handle format-specific constraints (such as PNG chunk injection or PDF cross-reference updates):
 ```javascript
-import { StegoData, BaseAdapter } from 'stegodata';
+import { StegoData, BaseAdapter } from '@automacene/stegodata';
 
 class CustomFormatAdapter extends BaseAdapter {
   inject(fileBuffer, blockBytes) {
