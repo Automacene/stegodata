@@ -1,13 +1,52 @@
 {
-  "name": "stegodata",
+  "name": "@automacene/stegodata",
   "version": "1.0.0",
-  "description": "Universal metadata embedding SDK for AI data pipelines",
+  "description": "Language-agnostic protocol for embedding structured steganographic memory into unstructured files—turning documents, images, and media into self-contained, context-aware containers for AI pipelines.",
   "type": "module",
+  "author": "Automacene (https://github.com/Automacene)",
+  "contributors": [
+    "Codie Petersen"
+  ],
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/Automacene/stegodata#readme",
+  "bugs": {
+    "url": "https://github.com/Automacene/stegodata/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Automacene/stegodata.git"
+  },
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "unpkg": "dist/stegodata.min.js",
+  "jsdelivr": "dist/stegodata.min.js",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node --test",
-    "build": "esbuild src/index.js --bundle --format=iife --global-name=StegoDataLib --minify --outfile=dist/stegodata.min.js"
+    "build": "esbuild src/index.js --bundle --format=iife --global-name=StegoDataLib --minify --outfile=dist/stegodata.min.js",
+    "prepublishOnly": "npm test && npm run build"
   },
+  "keywords": [
+    "steganography",
+    "metadata",
+    "ai",
+    "embeddings",
+    "pdf"
+  ],
   "devDependencies": {
     "esbuild": "^0.24.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./package.json": "./package.json"
   }
 }

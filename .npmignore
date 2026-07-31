@@ -1,0 +1,6 @@
+.github/
+tests/
+assets/
+ROADMAP.md
+.gitignore
+esbuild.config.js
