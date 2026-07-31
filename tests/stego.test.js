@@ -51,7 +51,7 @@ test('exposes static convenience helpers', async () => {
     payload: 'static-payload',
   });
 
-  const extracted = await StegoData.decode(combined);
+  const extracted = await StegoData.extract(combined);
   assert.equal(extracted.length, 1);
   assert.equal(extracted[0].headers.namespace, 'static:helpers');
   assert.equal(extracted[0].payload, 'static-payload');
